@@ -77,7 +77,7 @@ def create_dacer_net(
         target_q1_params = q1_params
         target_q2_params = q2_params
         policy_params = policy.init(policy_key, obs, act, 0)
-        log_alpha = jnp.array(1.0, dtype=jnp.float32) 
+        log_alpha = jnp.array(1.2, dtype=jnp.float32) # 1.2 or 1.7 choose one
         return DACERParams(q1_params, q2_params, target_q1_params, target_q2_params, policy_params, log_alpha)
 
     sample_obs = jnp.zeros((1, obs_dim))

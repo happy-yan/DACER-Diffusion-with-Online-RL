@@ -1,1 +1,1 @@
-add VectoerEnv wrapper for 20 samples per iteration
+add VectorEnv wrapper for 20 samples per iteration

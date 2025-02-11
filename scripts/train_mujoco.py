@@ -10,10 +10,12 @@ from relax.algorithm.dsact import DSACT
 from relax.algorithm.dacer import DACER
 from relax.algorithm.qsm import QSM
 from relax.algorithm.dipo import DIPO
+from relax.algorithm.qvpo import QVPO
 from relax.buffer import TreeBuffer
 from relax.network.sac import create_sac_net
 from relax.network.dsact import create_dsact_net
 from relax.network.dacer import create_dacer_net
+from relax.network.qvpo import create_qvpo_net
 from relax.network.qsm import create_qsm_net
 from relax.network.dipo import create_dipo_net
 from relax.trainer.off_policy import OffPolicyTrainer
@@ -60,7 +62,7 @@ if __name__ == "__main__":
     gelu = partial(jax.nn.gelu, approximate=False)
 
     if args.alg == "qsm":
-        agent, params = create_qsm_net(init_network_key, obs_dim, act_dim, hidden_sizes, num_timesteps=20, num_particles=64)
+        agent, params = create_qsm_net(init_network_key, obs_dim, act_dim, hidden_sizes, num_timesteps=args.diffusion_steps, num_particles=64)
         algorithm = QSM(agent, params, lr=args.lr)
     elif args.alg == "sac":
         agent, params = create_sac_net(init_network_key, obs_dim, act_dim, hidden_sizes, gelu)
@@ -87,6 +89,14 @@ if __name__ == "__main__":
 
         agent, params = create_dipo_net(init_network_key, obs_dim, act_dim, hidden_sizes, num_timesteps=100)
         algorithm = DIPO(agent, params, diffusion_buffer, lr=args.lr, action_gradient_steps=30, policy_target_delay=2, action_grad_norm=0.16)
+    elif args.alg == "qvpo":
+        def mish(x: jax.Array):
+            return x * jnp.tanh(jax.nn.softplus(x))
+        agent, params = create_qvpo_net(init_network_key, obs_dim, act_dim, hidden_sizes, diffusion_hidden_sizes, mish,
+                                          num_timesteps=args.diffusion_steps,
+                                          num_particles=4,
+                                          noise_scale=0.05)
+        algorithm = QVPO(agent, params, lr=args.lr, alpha_lr=7e-3, delay_alpha_update=250)
     else:
         raise ValueError(f"Invalid algorithm {args.alg}!")
 

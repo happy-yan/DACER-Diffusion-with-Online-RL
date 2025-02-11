@@ -6,7 +6,7 @@ import haiku as hk
 
 from relax.network.blocks import Activation, QNet, QScoreNet
 from relax.utils.langevin import LangevinDynamics
-
+from relax.utils.jax_utils import random_key_from_data
 
 class QSMParams(NamedTuple):
     q1: hk.Params
@@ -49,9 +49,28 @@ class QSMNet:
         return act
 
     def get_deterministic_action(self, policy_params: hk.Params, obs: jax.Array, *, num_particles: Optional[int] = None) -> jax.Array:
-        # NOTE: Not sure if it is wise to get deterministic action from the score model
-        key = jax.random.key(0)
-        return self.get_action(key, policy_params, obs, num_particles=num_particles)
+        # resample technique
+        eval_num_particles = 64 if num_particles is None else num_particles
+        key = random_key_from_data(obs) 
+        keys = jax.random.split(key, 16)  
+
+        def sample_best(key):
+            acts = self.get_action(key, policy_params, obs, num_particles=eval_num_particles)
+            acts = acts.reshape(-1, self.act_dim) 
+            obs_tiled = jnp.tile(obs, (acts.shape[0], 1))  
+            q1 = self.q(policy_params[1], obs_tiled, acts)
+            q2 = self.q(policy_params[2], obs_tiled, acts)
+            q = jnp.minimum(q1, q2)
+            best_idx = jnp.argmax(q)
+            return acts[best_idx]
+
+        candidates = jax.vmap(sample_best)(keys)
+        obs_tiled = jnp.tile(obs, (candidates.shape[0], 1)) 
+        q1 = self.q(policy_params[1], obs_tiled, candidates)
+        q2 = self.q(policy_params[2], obs_tiled, candidates)
+        q = jnp.minimum(q1, q2)
+        best_idx = jnp.argmax(q)
+        return candidates[best_idx]
 
     def get_q_score_from_gradient(self, q_params: hk.Params, obs: jax.Array, act: jax.Array) -> Tuple[jax.Array, jax.Array]:
         def inner(act: jax.Array, obs: jax.Array):

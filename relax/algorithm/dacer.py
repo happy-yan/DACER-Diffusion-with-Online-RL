@@ -211,7 +211,7 @@ def estimate_entropy(actions, num_components=3):  # (batch, sample, dim)
     from sklearn.mixture import GaussianMixture
     total_entropy = []
     for action in actions:
-        gmm = GaussianMixture(n_components=num_components, covariance_type='full')
+        gmm = GaussianMixture(n_components=num_components, covariance_type='full', random_state=42)
         gmm.fit(action)
         weights = gmm.weights_
         entropies = []

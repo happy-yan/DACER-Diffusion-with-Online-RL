@@ -52,9 +52,11 @@ If you find this repo useful, please consider giving us a star 🌟 and citing o
 
 ```bibtex
 @article{wang2024diffusion,
-  title={Diffusion Actor-Critic with Entropy Regulator},
-  author={Wang, Yinuo and Wang, Likun and Jiang, Yuxuan and Zou, Wenjun and Liu, Tong and Song, Xujie and Wang, Wenxuan and Xiao, Liming and Wu, Jiang and Duan, Jingliang and Shengbo Eben Li},
-  journal={arXiv preprint arXiv:2405.15177},
+  title={Diffusion actor-critic with entropy regulator},
+  author={Wang, Yinuo and Wang, Likun and Jiang, Yuxuan and Zou, Wenjun and Liu, Tong and Song, Xujie and Wang, Wenxuan and Xiao, Liming and Wu, Jiang and Duan, Jingliang and others},
+  journal={Advances in Neural Information Processing Systems},
+  volume={37},
+  pages={54183--54204},
   year={2024}
 }
 ```

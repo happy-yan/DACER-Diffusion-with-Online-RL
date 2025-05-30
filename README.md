@@ -42,7 +42,7 @@ chmod +x run_experiments.sh
 The code is under cleaning and will be released gradually.
 
 - [ ] improve docs
-- [x] more diffusion-based code [DIPO, QSM. QVPO(other branch)]
+- [x] more diffusion-based code [DIPO, QSM. QVPO]
 - [x] training code
 
 

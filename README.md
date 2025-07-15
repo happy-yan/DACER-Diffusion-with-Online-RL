@@ -31,11 +31,7 @@ pip install -e .
 XLA_FLAGS='--xla_gpu_deterministic_ops=true' CUDA_VISIBLE_DEVICES=0 XLA_PYTHON_CLIENT_MEM_FRACTION=.1 python scripts/train_mujoco.py --alg dacer --seed 100
 ```
 
-```bash
-# Run multiple experiments
-chmod +x run_experiments.sh
-./run_experiments.sh "0 1 2"
-```
+[Tip] If you want to run DACER on DMControl, please replace the Q-learning part with SAC and use the method in the paper for the policy part.
 
 ## To Do
 

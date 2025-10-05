@@ -61,6 +61,14 @@ If you find this repo useful, please consider giving us a star 🌟 and citing o
   pages={54183--54204},
   year={2024}
 }
+
+@article{wang2025enhanced,
+  title={Enhanced DACER Algorithm with High Diffusion Efficiency},
+  author={Wang, Yinuo and Tan, Mining and Zou, Wenjun and Lin, Haotian and Song, Xujie and Wang, Wenxuan and Liu, Tong and Wang, Likun and Zhan, Guojian and Zhu, Tianze and others},
+  journal={arXiv preprint arXiv:2505.23426},
+  year={2025}
+}
+
 ```
 
 ## Tips

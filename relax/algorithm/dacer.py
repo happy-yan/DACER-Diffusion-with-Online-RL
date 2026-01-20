@@ -78,7 +78,6 @@ class DACER(Algorithm):
 
             reward *= self.reward_scale
 
-            # compute target q
             next_action = self.agent.get_action(next_eval_key, (policy_params, log_alpha), next_obs)
             next_q1_mean, _, next_q1_sample = self.agent.q_evaluate(new_q1_eval_key, target_q1_params, next_obs, next_action)
             next_q2_mean, _, next_q2_sample = self.agent.q_evaluate(new_q2_eval_key, target_q2_params, next_obs, next_action)
@@ -89,7 +88,14 @@ class DACER(Algorithm):
             q_backup = reward + (1 - done) * self.gamma * q_target
             q_backup_sample = reward + (1 - done) * self.gamma * q_target_sample
 
-            # update q
+            def huber_loss(pred: jnp.ndarray, target: jnp.ndarray, delta: float) -> jnp.ndarray:
+                error = pred - target
+                return jnp.where(
+                    jnp.abs(error) <= delta,
+                    0.5 * jnp.square(error),
+                    delta * (jnp.abs(error) - 0.5 * delta)
+                )
+
             def q_loss_fn(q_params: hk.Params, mean_q_std: float) -> jax.Array:
                 q_mean, q_std = self.agent.q(q_params, obs, action)
                 new_mean_q_std = jnp.mean(q_std)
@@ -97,13 +103,17 @@ class DACER(Algorithm):
                     (mean_q_std == -1.0) * new_mean_q_std +
                     (mean_q_std != -1.0) * (self.tau * new_mean_q_std + (1 - self.tau) * mean_q_std)
                 )
-                q_backup_bounded = jax.lax.stop_gradient(q_mean + jnp.clip(q_backup_sample - q_mean, -3 * mean_q_std, 3 * mean_q_std))
-                q_std_detach = jax.lax.stop_gradient(jnp.maximum(q_std, 0))
-                epsilon = 0.1
-                q_loss = -(mean_q_std ** 2 + epsilon) * jnp.mean(
-                    q_mean * jax.lax.stop_gradient(q_backup - q_mean) / (q_std_detach ** 2 + epsilon) +
-                    q_std * ((jax.lax.stop_gradient(q_mean) - q_backup_bounded) ** 2 - q_std_detach ** 2) / (q_std_detach ** 3 + epsilon)
+                q_backup_bounded = jax.lax.stop_gradient(
+                    q_mean + jnp.clip(q_backup_sample - q_mean, -3 * mean_q_std, 3 * mean_q_std)
                 )
+                q_std_detach = jax.lax.stop_gradient(jnp.maximum(q_std, 0))
+                bias = 0.1
+                ratio = (jnp.square(mean_q_std) / (jnp.square(q_std_detach) + bias))
+                ratio = jax.lax.clamp(0.1, ratio, 10.0)
+                huber_term = huber_loss(q_mean, q_backup, delta=50)
+                std_huber_term = huber_loss(jax.lax.stop_gradient(q_mean), q_backup_bounded, delta=50)
+                std_term = q_std * (jnp.square(q_std_detach) - std_huber_term) / (q_std_detach + bias)
+                q_loss = jnp.mean(ratio * (huber_term + std_term))
                 return q_loss, (q_mean, q_std, mean_q_std)
 
             (q1_loss, (q1_mean, q1_std, mean_q1_std)), q1_grads = jax.value_and_grad(q_loss_fn, has_aux=True)(q1_params, mean_q1_std)
@@ -124,7 +134,6 @@ class DACER(Algorithm):
                 lambda: prev_entropy
             )
             
-            # update policy
             def policy_loss_fn(policy_params) -> jax.Array:
                 new_action = self.agent.get_action(new_eval_key, (policy_params, log_alpha), obs)
                 q1_mean, _ = self.agent.q(q1_params, obs, new_action)
@@ -135,12 +144,10 @@ class DACER(Algorithm):
 
             total_loss, policy_grads = jax.value_and_grad(policy_loss_fn)(policy_params)
             
-            # update alpha
             def log_alpha_loss_fn(log_alpha: jax.Array) -> jax.Array:
                 log_alpha_loss = -jnp.mean(log_alpha * (-entropy + self.agent.target_entropy))
                 return log_alpha_loss
 
-            # update networks
             def param_update(optim, params, grads, opt_state):
                 update, new_opt_state = optim.update(grads, opt_state)
                 new_params = optax.apply_updates(params, update)
